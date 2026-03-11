@@ -1,0 +1,72 @@
+﻿<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData[ "Title" ] — Biblioteket</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <base href="~/" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="/">BIBLIOTEKET</a>
+
+                <!-- Hamburger-knapp -->
+                <button class="navbar-toggler" type="button"
+                        data-bs-toggle="offcanvas"
+                        data-bs-target="#mobileMenu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Desktop: sök + meny (dold på mobil) -->
+                <div class="collapse navbar-collapse justify-content-end d-none d-lg-flex align-items-center gap-3">
+
+                    <!-- Global sökning -->
+                    <component type="typeof( Library2.Components.GlobalSearch )" render-mode="ServerPrerendered" />
+
+                    <ul class="navbar-nav">
+                        <li class="nav-item"><a class="nav-link" href="/blazor">Statistik</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/blazor/books">Böcker</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/blazor/members">Medlemmar</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/blazor/loans">Utlåning</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/logout">Logga ut</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Offcanvas-meny (endast mobil) -->
+        <div class="offcanvas offcanvas-end d-lg-none" id="mobileMenu">
+            <div class="offcanvas-header">
+                <span class="navbar-brand">BIBLIOTEKET</span>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+            </div>
+            <div class="offcanvas-body">
+                <!-- Sök även i mobilmenyn -->
+                <div class="mb-3">
+                    <component type="typeof( Library2.Components.GlobalSearch )" render-mode="ServerPrerendered" />
+                </div>
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="/blazor">Statistik</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/blazor/books">Böcker</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/blazor/members">Medlemmar</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/blazor/loans">Utlåning</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout">Logga ut</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+    <main>
+        @RenderBody()
+    </main>
+    <footer>
+        BIBLIOTEKSSYSTEM &nbsp;·&nbsp; @DateTime.Now.Year
+    </footer>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/_framework/blazor.server.js"></script>
+    @await RenderSectionAsync( "Scripts", required: false )
+</body>
+</html>

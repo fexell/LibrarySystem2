@@ -1,0 +1,43 @@
+﻿@using Library2.Models
+
+<div class="card h-100 @(Book.IsAvailable ? "border-success" : "border-warning")">
+    <div class="card-body">
+        <h5 class="card-title">@Book.Title</h5>
+        <h6 class="card-subtitle mb-2 text-muted">@Book.Author</h6>
+
+        <ul class="list-unstyled mt-3">
+            <li><strong>ISBN:</strong> @Book.ISBN</li>
+            <li><strong>År:</strong> @Book.PublishedYear</li>
+            <li>
+                <strong>Status:</strong>
+                <span class="badge @(Book.IsAvailable ? "bg-success" : "bg-warning text-dark")">
+                    @(Book.IsAvailable ? "Tillgänglig" : "Utlånad")
+                </span>
+            </li>
+        </ul>
+    </div>
+
+    <div class="card-footer d-flex gap-2">
+        <a href="/blazor/books/@Book.Id" class="btn btn-sm btn-outline-primary w-100">
+            Detaljer
+        </a>
+        @if ( OnDelete.HasDelegate ) {
+            <button class="btn btn-sm btn-outline-danger"
+                    @onclick="HandleDelete">
+                Ta bort
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Book Book { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<int> OnDelete { get; set; }
+
+    private async Task HandleDelete() {
+        await OnDelete.InvokeAsync( Book.Id );
+    }
+}

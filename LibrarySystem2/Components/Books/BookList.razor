@@ -1,0 +1,469 @@
+﻿@page "/blazor/books"
+@using Library2.Models
+@using Library2.Interfaces
+@inject IBookRepository BookRepository
+@inject ILoanRepository LoanRepository
+@inject IMemberRepository MemberRepository
+
+@* ── Felmeddelande ──────────────────────────────────────────── *@
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
+
+@* ── Bekräftelsemodal (borttagning) ────────────────────────── *@
+@if (showDeleteModal)
+{
+    <div class="modal-backdrop" @onclick="CancelDelete"></div>
+    <div class="modal-dialog-custom">
+        <div class="card p-4">
+            <h5 class="mb-1">Ta bort bok</h5>
+            <p class="text-muted mb-4">
+                Är du säker på att du vill ta bort
+                <strong style="color: var(--text)">@bookToDeleteTitle</strong>?
+                Detta går inte att ångra.
+            </p>
+            <div class="d-flex gap-2 justify-content-end">
+                <button class="btn btn-secondary" @onclick="CancelDelete">Avbryt</button>
+                <button class="btn btn-danger"    @onclick="ConfirmDelete">Ta bort</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Redigeringsmodal ───────────────────────────────────────── *@
+@if ( showEditModal ) {
+    <div class="modal-backdrop" @onclick="CancelEdit"></div>
+    <div class="modal-dialog-custom">
+        <div class="card p-4">
+            <h5 class="mb-3">Redigera bok</h5>
+            <div class="mb-2">
+                <label>ISBN</label>
+                <input class="form-control" @bind="editBook.ISBN" />
+            </div>
+            <div class="mb-2">
+                <label>Titel</label>
+                <input class="form-control" @bind="editBook.Title" />
+            </div>
+            <div class="mb-2">
+                <label>Författare</label>
+                <input class="form-control" @bind="editBook.Author" />
+            </div>
+            <div class="mb-2">
+                <label>Utgivningsår</label>
+                <input class="form-control"
+                       type="number"
+                       min="1000"
+                       max="@DateTime.Today.Year"
+                       placeholder="t.ex. 2008"
+                       value="@(editBook.PublishedYear == 0 ? null : editBook.PublishedYear)"
+                       @onchange="e => editBook.PublishedYear = int.TryParse( e.Value?.ToString(), out var y ) ? y : 0" />
+            </div>
+            @if ( !string.IsNullOrEmpty( editErrorMessage ) ) {
+                <div class="alert alert-danger mt-2">@editErrorMessage</div>
+            }
+            <div class="d-flex gap-2 justify-content-end mt-3">
+                <button class="btn btn-secondary" @onclick="CancelEdit">Avbryt</button>
+                <button class="btn btn-primary" @onclick="SaveEdit">Spara</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Huvudinnehåll ───────────────────────────────────────────── *@
+<div class="container mt-4">
+
+    @* Rubrik + lägg-till-knapp *@
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Böcker</h2>
+        <button class="btn btn-primary" @onclick="ToggleAddForm">+ Lägg till bok</button>
+    </div>
+
+    @* Sökfält *@
+    <div class="mb-3">
+        <input class="form-control"
+               placeholder="Sök på titel, författare eller ISBN..."
+               @bind="searchTerm"
+               @bind:event="oninput"
+               @onkeyup="HandleSearch" />
+    </div>
+
+    @* Lägg-till-formulär *@
+    @if ( showAddForm ) {
+        <div class="card mb-3 p-4">
+            <h4>Lägg till ny bok</h4>
+            <div class="mb-2">
+                <label>ISBN</label>
+                <input class="form-control" @bind="newBook.ISBN" />
+            </div>
+            <div class="mb-2">
+                <label>Titel</label>
+                <input class="form-control" @bind="newBook.Title" />
+            </div>
+            <div class="mb-2">
+                <label>Författare</label>
+                <input class="form-control" @bind="newBook.Author" />
+            </div>
+            <div class="mb-2">
+                <label>Utgivningsår</label>
+                <input class="form-control"
+                       type="number"
+                       min="1000"
+                       max="@DateTime.Today.Year"
+                       placeholder="t.ex. 2008"
+                       value="@(newBook.PublishedYear == 0 ? null : newBook.PublishedYear)"
+                       @onchange="e => newBook.PublishedYear = int.TryParse( e.Value?.ToString(), out var y ) ? y : 0" />
+            </div>
+            @if ( !string.IsNullOrEmpty( errorMessage ) ) {
+                <div class="alert alert-danger">@errorMessage</div>
+            }
+            <div class="d-flex gap-2 mt-2">
+                <button class="btn btn-success" @onclick="AddBook">Spara</button>
+                <button class="btn btn-secondary" @onclick="ToggleAddForm">Avbryt</button>
+            </div>
+        </div>
+    }
+
+    @* Bokstabell *@
+    @if (isLoading)
+    {
+        <p>Laddar böcker...</p>
+    }
+    else if (!pagedBooks.Any())
+    {
+        <p class="text-muted">Inga böcker hittades.</p>
+    }
+    else
+    {
+        <div class="table-responsive-wrapper">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th @onclick='() => SortBy("Title")'         style="cursor:pointer">Titel        @SortIndicator("Title")</th>
+                        <th @onclick='() => SortBy("Author")'        style="cursor:pointer">Författare   @SortIndicator("Author")</th>
+                        <th @onclick='() => SortBy("PublishedYear")' style="cursor:pointer">År           @SortIndicator("PublishedYear")</th>
+                        <th>ISBN</th>
+                        <th>Status</th>
+                        <th>Åtgärder</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var book in pagedBooks)
+                    {
+                        <tr>
+                            <td>@book.Title</td>
+                            <td>@book.Author</td>
+                            <td>@book.PublishedYear</td>
+                            <td>@book.ISBN</td>
+                            <td>
+                                <span class="badge @(book.IsAvailable ? "bg-success" : "bg-warning text-dark")">
+                                    @(book.IsAvailable ? "Tillgänglig" : "Utlånad")
+                                </span>
+                            </td>
+                            <td>
+                                <a href="/blazor/books/@book.Id" class="btn btn-sm btn-outline-primary me-1">Detaljer</a>
+                                <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => OpenEdit(book)">Redigera</button>
+                                @if (book.IsAvailable)
+                                {
+                                    <button class="btn btn-sm btn-outline-success me-1" @onclick="() => LoanBook(book.Id)">Låna</button>
+                                }
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => RequestDelete(book.Id, book.Title)">Ta bort</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @* Paginering *@
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <small class="text-muted">
+                Visar @((currentPage - 1) * pageSize + 1)–@(Math.Min(currentPage * pageSize, totalCount)) av @totalCount böcker
+            </small>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => GoToPage(currentPage - 1)">‹</button>
+                    </li>
+                    @for (int p = 1; p <= totalPages; p++)
+                    {
+                        var pageNum = p;
+                        <li class="page-item @(currentPage == pageNum ? "active" : "")">
+                            <button class="page-link" @onclick="() => GoToPage(pageNum)">@pageNum</button>
+                        </li>
+                    }
+                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => GoToPage(currentPage + 1)">›</button>
+                    </li>
+                </ul>
+            </nav>
+            <select class="form-select form-select-sm" style="width:auto"
+                    @onchange="e => ChangePageSize(int.Parse(e.Value!.ToString()!))">
+                <option value="5"  selected="@(pageSize == 5)">5 per sida</option>
+                <option value="10" selected="@(pageSize == 10)">10 per sida</option>
+                <option value="25" selected="@(pageSize == 25)">25 per sida</option>
+            </select>
+        </div>
+    }
+
+</div>
+
+@code {
+
+    // ── Bokdata ────────────────────────────────────────────────────
+    private IEnumerable<Book> pagedBooks = new List<Book>();
+    private Book newBook = new() { PublishedYear = 0 };
+    private bool isLoading = true;
+    private bool showAddForm = false;
+    private string errorMessage = string.Empty;
+
+    // ── Sökning & sortering ────────────────────────────────────────
+    private string searchTerm = string.Empty;
+    private string sortColumn = "Title";
+    private bool sortAscending = true;
+
+    // ── Paginering ─────────────────────────────────────────────────
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalCount = 0;
+    private int totalPages => (int)Math.Ceiling(totalCount / (double)pageSize);
+
+    // ── Redigeringsmodal ───────────────────────────────────────────
+    private bool showEditModal = false;
+    private Book editBook = new();
+    private string editErrorMessage = string.Empty;
+
+    // ── Borttagningsmodal ──────────────────────────────────────────
+    private bool showDeleteModal = false;
+    private int bookToDeleteId = 0;
+    private string bookToDeleteTitle = string.Empty;
+
+
+    // ── Livscykel ──────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync() => await LoadBooks();
+
+
+    // ── Datahämtning ───────────────────────────────────────────────
+
+    private async Task LoadBooks()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            totalCount = await BookRepository.GetCountAsync(
+                string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm
+            );
+            pagedBooks = await BookRepository.GetPagedAsync(
+                currentPage, pageSize, sortColumn, sortAscending
+            );
+        }
+        catch (InvalidOperationException ex) { errorMessage = ex.Message; }
+        catch (Exception)                    { errorMessage = "Ett oväntat fel uppstod. Försök igen."; }
+        finally                              { isLoading = false; }
+    }
+
+
+    // ── Sökning & sortering ────────────────────────────────────────
+
+    private async Task HandleSearch()
+    {
+        currentPage = 1;
+        await LoadBooks();
+    }
+
+    private async Task SortBy(string column)
+    {
+        if (sortColumn == column)
+            sortAscending = !sortAscending;
+        else
+        {
+            sortColumn = column;
+            sortAscending = true;
+        }
+        await LoadBooks();
+    }
+
+    private string SortIndicator(string column) =>
+        sortColumn != column ? string.Empty : (sortAscending ? "▲" : "▼");
+
+
+    // ── Paginering ─────────────────────────────────────────────────
+
+    private async Task GoToPage(int page)
+    {
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        await LoadBooks();
+    }
+
+    private async Task ChangePageSize(int size)
+    {
+        pageSize = size;
+        currentPage = 1;
+        await LoadBooks();
+    }
+
+
+    // ── Lägg till bok ──────────────────────────────────────────────
+
+    private void ToggleAddForm() => showAddForm = !showAddForm;
+
+    private async Task AddBook()
+    {
+        try
+        {
+            errorMessage = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(newBook.ISBN)   ||
+                string.IsNullOrWhiteSpace(newBook.Title)  ||
+                string.IsNullOrWhiteSpace(newBook.Author) ||
+                newBook.PublishedYear < 1)
+            {
+                errorMessage = "Alla fält måste fyllas i.";
+                return;
+            }
+
+            if (await BookRepository.GetByISBNAsync(newBook.ISBN) is not null)
+            {
+                errorMessage = "En bok med detta ISBN finns redan.";
+                return;
+            }
+
+            await BookRepository.AddAsync(newBook);
+            newBook = new() { PublishedYear = 0 };
+            showAddForm = false;
+            await LoadBooks();
+        }
+        catch (InvalidOperationException ex) { errorMessage = ex.Message; }
+        catch (Exception)                    { errorMessage = "Kunde inte spara boken. Försök igen."; }
+    }
+
+
+    // ── Redigera bok ───────────────────────────────────────────────
+
+    private void OpenEdit(Book book)
+    {
+        editBook = new Book
+        {
+            Id            = book.Id,
+            ISBN          = book.ISBN,
+            Title         = book.Title,
+            Author        = book.Author,
+            PublishedYear = book.PublishedYear,
+            IsAvailable   = book.IsAvailable
+        };
+        editErrorMessage = string.Empty;
+        showEditModal = true;
+    }
+
+    private void CancelEdit()
+    {
+        showEditModal = false;
+        editErrorMessage = string.Empty;
+    }
+
+    private async Task SaveEdit()
+    {
+        try
+        {
+            editErrorMessage = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(editBook.ISBN)   ||
+                string.IsNullOrWhiteSpace(editBook.Title)  ||
+                string.IsNullOrWhiteSpace(editBook.Author) ||
+                editBook.PublishedYear < 1)
+            {
+                editErrorMessage = "Alla fält måste fyllas i.";
+                return;
+            }
+
+            var existing = await BookRepository.GetByISBNAsync(editBook.ISBN);
+            if (existing is not null && existing.Id != editBook.Id)
+            {
+                editErrorMessage = "En annan bok med detta ISBN finns redan.";
+                return;
+            }
+
+            await BookRepository.UpdateAsync(editBook);
+            showEditModal = false;
+            await LoadBooks();
+        }
+        catch (InvalidOperationException ex) { editErrorMessage = ex.Message; }
+        catch (Exception)                    { editErrorMessage = "Kunde inte spara ändringarna. Försök igen."; }
+    }
+
+
+    // ── Ta bort bok ────────────────────────────────────────────────
+
+    private void RequestDelete(int id, string title)
+    {
+        bookToDeleteId    = id;
+        bookToDeleteTitle = title;
+        showDeleteModal   = true;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteModal   = false;
+        bookToDeleteId    = 0;
+        bookToDeleteTitle = string.Empty;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            showDeleteModal = false;
+
+            await BookRepository.DeleteAsync(bookToDeleteId);
+
+            if (currentPage > 1 && (totalCount - 1) <= (currentPage - 1) * pageSize)
+                currentPage--;
+
+            await LoadBooks();
+        }
+        catch (InvalidOperationException ex) { errorMessage = ex.Message; }
+        catch (Exception)                    { errorMessage = "Kunde inte ta bort boken. Försök igen."; }
+    }
+
+
+    // ── Låna bok ───────────────────────────────────────────────────
+
+    private async Task LoanBook(int id)
+    {
+        try
+        {
+            errorMessage = string.Empty;
+
+            var book = await BookRepository.GetByIdAsync(id);
+            if (book is null) return;
+
+            if (!book.IsAvailable)
+            {
+                errorMessage = "Boken är redan utlånad.";
+                return;
+            }
+
+            var member = await MemberRepository.GetByIdAsync(1);
+            if (member is null)
+            {
+                errorMessage = "Ingen medlem hittades.";
+                return;
+            }
+
+            await LoanRepository.AddAsync(new Loan(
+                book:     book,
+                member:   member,
+                loanDate: DateTime.Now,
+                dueDate:  DateTime.Now.AddDays(14)
+            ));
+
+            await LoadBooks();
+        }
+        catch (InvalidOperationException ex) { errorMessage = ex.Message; }
+        catch (Exception)                    { errorMessage = "Kunde inte registrera lånet. Försök igen."; }
+    }
+}

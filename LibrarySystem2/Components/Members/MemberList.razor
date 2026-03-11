@@ -1,0 +1,332 @@
+﻿@page "/blazor/members"
+@using Library2.Models
+@using Library2.Interfaces
+@inject IMemberRepository MemberRepository
+
+<!-- Bekräftelsemodal -->
+@if ( showDeleteModal ) {
+    <div class="modal-backdrop" @onclick="CancelDelete"></div>
+    <div class="modal-dialog-custom">
+        <div class="card p-4">
+            <h5 class="mb-1">Ta bort medlem</h5>
+            <p class="text-muted mb-4">
+                Är du säker på att du vill ta bort <strong style="color: var(--text)">@memberToDeleteName</strong>?
+                Detta går inte att ångra.
+            </p>
+            <div class="d-flex gap-2 justify-content-end">
+                <button class="btn btn-secondary" @onclick="CancelDelete">Avbryt</button>
+                <button class="btn btn-danger" @onclick="ConfirmDelete">Ta bort</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Redigeringsmodal -->
+@if ( showEditModal ) {
+    <div class="modal-backdrop" @onclick="CancelEdit"></div>
+    <div class="modal-dialog-custom">
+        <div class="card p-4">
+            <h5 class="mb-3">Redigera medlem</h5>
+            <div class="mb-2">
+                <label>Användarnamn</label>
+                <input class="form-control" @bind="editMember.Username" />
+            </div>
+            <div class="mb-2">
+                <label>Email</label>
+                <input class="form-control" type="email" @bind="editMember.Email" />
+            </div>
+            @if ( !string.IsNullOrEmpty( editErrorMessage ) ) {
+                <div class="alert alert-danger mt-2">@editErrorMessage</div>
+            }
+            <div class="d-flex gap-2 justify-content-end mt-3">
+                <button class="btn btn-secondary" @onclick="CancelEdit">Avbryt</button>
+                <button class="btn btn-primary" @onclick="SaveEdit">Spara</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Huvudinnehåll -->
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Medlemmar</h2>
+        <button class="btn btn-primary" @onclick="ToggleAddForm">+ Lägg till medlem</button>
+    </div>
+
+    <!-- Sökfält -->
+    <div class="mb-3">
+        <input class="form-control"
+               placeholder="Sök på namn, email eller ID..."
+               @bind="searchTerm"
+               @bind:event="oninput"
+               @onkeyup="HandleSearch" />
+    </div>
+
+    @if ( !string.IsNullOrEmpty( errorMessage ) && !showAddForm ) {
+        <div class="alert alert-danger mt-2">@errorMessage</div>
+    }
+
+    @if ( showAddForm ) {
+        <div class="card mb-3 p-4">
+            <h4>Lägg till ny medlem</h4>
+            <div class="mb-2">
+                <label>Användarnamn</label>
+                <input class="form-control" @bind="newMember.Username" />
+            </div>
+            <div class="mb-2">
+                <label>Email</label>
+                <input class="form-control" type="email" @bind="newMember.Email" />
+            </div>
+            @if ( !string.IsNullOrEmpty( errorMessage ) ) {
+                <div class="alert alert-danger">@errorMessage</div>
+            }
+            <div class="d-flex gap-2 mt-2">
+                <button class="btn btn-success" @onclick="AddMember">Spara</button>
+                <button class="btn btn-secondary" @onclick="() => showAddForm = false">Avbryt</button>
+            </div>
+        </div>
+    }
+
+    @if ( isLoading ) {
+        <p>Laddar medlemmar...</p>
+    } else if ( !filteredMembers.Any() ) {
+        <p class="text-muted">Inga medlemmar hittades.</p>
+    } else {
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th @onclick='() => SortBy( "Username" )' style="cursor:pointer">Namn @SortIndicator( "Username" )</th>
+                        <th @onclick='() => SortBy( "Email" )' style="cursor:pointer">Email @SortIndicator( "Email" )</th>
+                        <th @onclick='() => SortBy( "MemberSince" )' style="cursor:pointer">Medlem sedan @SortIndicator( "MemberSince" )</th>
+                        <th>Aktiva lån</th>
+                        <th>Åtgärder</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ( var member in filteredMembers ) {
+                        <tr>
+                            <td>@member.Username</td>
+                            <td>@member.Email</td>
+                            <td>@member.MemberSince.ToShortDateString()</td>
+                            <td>
+                                <span class="badge bg-primary">
+                                    @member.Loans.Count( l => !l.IsReturned )
+                                </span>
+                            </td>
+                            <td>
+                                <a href="/blazor/members/@member.Id"
+                                   class="btn btn-sm btn-outline-primary me-1">
+                                    Detaljer
+                                </a>
+                                <button class="btn btn-sm btn-outline-secondary me-1"
+                                        @onclick="() => OpenEdit( member )">
+                                    Redigera
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger"
+                                        @onclick="() => RequestDelete( member.Id, member.Username )">
+                                    Ta bort
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+
+    // ── Medlemsdata ──────────────────────────────────────────────
+    private IEnumerable<Member> allMembers = new List<Member>();
+    private IEnumerable<Member> filteredMembers = new List<Member>();
+    private Member newMember = new();
+
+    // ── Sökning & sortering ───────────────────────────────────────
+    private string searchTerm = string.Empty;
+    private string sortColumn = "Username";
+    private bool sortAscending = true;
+
+    // ── UI-status ────────────────────────────────────────────────
+    private bool isLoading = true;
+    private bool showAddForm = false;
+    private string errorMessage = string.Empty;
+
+    // ── Redigeringsmodal ─────────────────────────────────────────
+    private bool showEditModal = false;
+    private Member editMember = new();
+    private string editErrorMessage = string.Empty;
+
+    // ── Borttagningsmodal ────────────────────────────────────────
+    private bool showDeleteModal = false;
+    private int memberToDeleteId = 0;
+    private string memberToDeleteName = string.Empty;
+
+    // ── Livscykel ────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync() => await LoadMembers();
+
+    // ── Datainläsning ────────────────────────────────────────────
+    private async Task LoadMembers() {
+        try {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            allMembers = await MemberRepository.GetAllAsync();
+            ApplySortAndFilter();
+        } catch ( InvalidOperationException ex ) {
+            errorMessage = ex.Message;
+        } catch {
+            errorMessage = "Ett oväntat fel uppstod. Försök igen.";
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    // ── Redigera ─────────────────────────────────────────────────
+    private void OpenEdit( Member member ) {
+        editMember = new Member {
+            Id = member.Id,
+            Username = member.Username,
+            Email = member.Email,
+            MemberSince = member.MemberSince
+        };
+
+        editErrorMessage = string.Empty;
+        showEditModal = true;
+    }
+
+    private void CancelEdit() {
+        showEditModal = false;
+        editErrorMessage = string.Empty;
+    }
+
+    private async Task SaveEdit() {
+        try {
+            editErrorMessage = string.Empty;
+
+            if ( string.IsNullOrWhiteSpace( editMember.Username ) ||
+                string.IsNullOrWhiteSpace( editMember.Email ) ) {
+                editErrorMessage = "Alla fält måste fyllas i.";
+                return;
+            }
+
+            var existing = await MemberRepository.GetByUsernameAsync( editMember.Username );
+            if ( existing is not null && existing.Id != editMember.Id ) {
+                editErrorMessage = "En annan medlem med detta användarnamn finns redan.";
+                return;
+            }
+
+            await MemberRepository.UpdateAsync( editMember );
+            showEditModal = false;
+            await LoadMembers();
+        } catch ( InvalidOperationException ex ) {
+            editErrorMessage = ex.Message;
+        } catch {
+            editErrorMessage = "Kunde inte spara ändringarna. Försök igen.";
+        }
+    }
+
+    // ── Borttagning ──────────────────────────────────────────────
+    private void RequestDelete( int id, string name ) {
+        memberToDeleteId = id;
+        memberToDeleteName = name;
+        showDeleteModal = true;
+    }
+
+    private void CancelDelete() {
+        showDeleteModal = false;
+        memberToDeleteId = 0;
+        memberToDeleteName = string.Empty;
+    }
+
+    private async Task ConfirmDelete() {
+        try {
+            showDeleteModal = false;
+            await MemberRepository.DeleteAsync( memberToDeleteId );
+            await LoadMembers();
+        } catch ( KeyNotFoundException ex ) {
+            errorMessage = ex.Message;
+        } catch ( InvalidOperationException ex ) {
+            errorMessage = ex.Message;
+        } catch {
+            errorMessage = "Kunde inte ta bort medlemmen. Försök igen.";
+        }
+    }
+
+    // ── Sökning & sortering ───────────────────────────────────────
+    private async Task HandleSearch() {
+        try {
+            filteredMembers = string.IsNullOrWhiteSpace( searchTerm )
+                ? allMembers
+                : await MemberRepository.SearchAsync( searchTerm );
+
+            ApplySort();
+        } catch ( InvalidOperationException ex ) {
+            errorMessage = ex.Message;
+        } catch {
+            errorMessage = "Sökningen misslyckades. Försök igen.";
+        }
+    }
+
+    private void SortBy( string column ) {
+        if ( sortColumn == column )
+            sortAscending = !sortAscending;
+        else {
+            sortColumn = column;
+            sortAscending = true;
+        }
+
+        ApplySort();
+    }
+
+    private void ApplySortAndFilter() {
+        filteredMembers = allMembers;
+        ApplySort();
+    }
+
+    private void ApplySort() {
+        filteredMembers = sortColumn switch {
+            "Email" => sortAscending ? filteredMembers.OrderBy( m => m.Email ) : filteredMembers.OrderByDescending( m => m.Email ),
+            "MemberSince" => sortAscending ? filteredMembers.OrderBy( m => m.MemberSince ) : filteredMembers.OrderByDescending( m => m.MemberSince ),
+            _ => sortAscending ? filteredMembers.OrderBy( m => m.Username ) : filteredMembers.OrderByDescending( m => m.Username ),
+        };
+    }
+
+    private string SortIndicator( string column ) =>
+        sortColumn != column ? string.Empty : ( sortAscending ? "▲" : "▼" );
+
+    // ── Skapa medlem ─────────────────────────────────────────────
+    private void ToggleAddForm() => showAddForm = !showAddForm;
+
+    private async Task AddMember() {
+        try {
+            errorMessage = string.Empty;
+
+            if ( string.IsNullOrWhiteSpace( newMember.Username ) ||
+                string.IsNullOrWhiteSpace( newMember.Email ) ) {
+                errorMessage = "Alla fält måste fyllas i.";
+                return;
+            }
+
+            var existing = await MemberRepository.GetByUsernameAsync( newMember.Username );
+            if ( existing is not null ) {
+                errorMessage = "En medlem med detta användarnamn finns redan.";
+                return;
+            }
+
+            newMember.MemberSince = DateTime.UtcNow;
+
+            await MemberRepository.AddAsync( newMember );
+
+            newMember = new();
+            showAddForm = false;
+
+            await LoadMembers();
+        } catch ( InvalidOperationException ex ) {
+            errorMessage = ex.Message;
+        } catch {
+            errorMessage = "Kunde inte spara medlemmen. Försök igen.";
+        }
+    }
+}

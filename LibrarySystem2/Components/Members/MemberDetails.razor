@@ -1,0 +1,181 @@
+﻿@page "/blazor/members/{Id:int}"
+@using Library2.Models
+@using Library2.Interfaces
+@inject IMemberRepository MemberRepository
+@inject ILoanRepository LoanRepository
+@inject NavigationManager Navigation
+
+<div class="container mt-4">
+    @if ( isLoading ) {
+        <p>Laddar...</p>
+    } else if ( member is null ) {
+        <div class="alert alert-danger">Medlemmen hittades inte.</div>
+        <a href="/blazor/members" class="btn btn-secondary">Tillbaka</a>
+    } else {
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>@member.Username</h2>
+            <a href="/blazor/members" class="btn btn-outline-secondary">← Tillbaka</a>
+        </div>
+
+        @* Medlemsinfo *@
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Användarnamn:</strong> @member.Username</p>
+                        <p><strong>Email:</strong> @member.Email</p>
+                        <p><strong>Medlem sedan:</strong> @member.MemberSince.ToShortDateString()</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p>
+                            <strong>Aktiva lån:</strong>
+                            <span class="badge bg-primary">
+                                @activeLoans.Count()
+                            </span>
+                        </p>
+                        <p>
+                            <strong>Försenade lån:</strong>
+                            <span class="badge @(overdueLoans.Any() ? "bg-danger" : "bg-success")">
+                                @overdueLoans.Count()
+                            </span>
+                        </p>
+                        <p>
+                            <strong>Totalt antal lån:</strong>
+                            @allLoans.Count()
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Aktiva lån *@
+        <div class="card mb-4 p-4">
+            <h5>Aktiva lån</h5>
+            @if ( !activeLoans.Any() ) {
+                <p class="text-muted">Inga aktiva lån.</p>
+            } else {
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Bok</th>
+                            <th>Utlånad</th>
+                            <th>Förfaller</th>
+                            <th>Status</th>
+                            <th>Åtgärd</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ( var loan in activeLoans ) {
+                            <tr>
+                                <td>
+                                    <a href="/blazor/books/@loan.BookId">
+                                        @loan.Book?.Title
+                                    </a>
+                                </td>
+                                <td>@loan.LoanDate.ToShortDateString()</td>
+                                <td>
+                                    <span class="@(loan.IsOverdue ? "text-danger fw-bold" : "")">
+                                        @loan.DueDate.ToShortDateString()
+                                        @(loan.IsOverdue ? " ⚠" : "")
+                                    </span>
+                                </td>
+                                <td>
+                                    @if ( loan.IsOverdue ) {
+                                        <span class="badge bg-danger">Försenad</span>
+                                    } else {
+                                        <span class="badge bg-warning text-dark">Aktiv</span>
+                                    }
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-success"
+                                            @onclick="() => ReturnLoan(loan.Id)">
+                                        Återlämna
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+
+        @* Lånehistorik *@
+        <div class="card p-4">
+            <h5>Lånehistorik</h5>
+            @if ( !returnedLoans.Any() ) {
+                <p class="text-muted">Inga tidigare lån.</p>
+            } else {
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Bok</th>
+                            <th>Utlånad</th>
+                            <th>Återlämnad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ( var loan in returnedLoans ) {
+                            <tr>
+                                <td>
+                                    <a href="/blazor/books/@loan.BookId">
+                                        @loan.Book?.Title
+                                    </a>
+                                </td>
+                                <td>@loan.LoanDate.ToShortDateString()</td>
+                                <td>@loan.ReturnDate!.Value.ToShortDateString()</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+</div>
+
+@code {
+
+    // ── Routing ──────────────────────────────────────────────────
+    [Parameter]
+    public int Id { get; set; }
+
+    // ── Medlemsdata ──────────────────────────────────────────────
+    private Member? member;
+    private IEnumerable<Loan> allLoans = new List<Loan>();
+
+    // ── Lån (filtrerat) ──────────────────────────────────────────
+    private IEnumerable<Loan> activeLoans = new List<Loan>();
+    private IEnumerable<Loan> overdueLoans = new List<Loan>();
+    private IEnumerable<Loan> returnedLoans = new List<Loan>();
+
+    // ── UI-status ────────────────────────────────────────────────
+    private bool isLoading = true;
+
+    // ── Livscykel ────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync() {
+        await LoadData();
+    }
+
+    protected override async Task OnParametersSetAsync() {
+        await LoadData();
+    }
+
+    // ── Datainläsning ────────────────────────────────────────────
+    private async Task LoadData() {
+        isLoading = true;
+
+        member = await MemberRepository.GetByIdAsync( Id );
+        allLoans = await LoanRepository.GetByMemberIdAsync( Id );
+
+        activeLoans = allLoans.Where( l => !l.IsReturned );
+        overdueLoans = allLoans.Where( l => l.IsOverdue );
+        returnedLoans = allLoans.Where( l => l.IsReturned );
+
+        isLoading = false;
+    }
+
+    // ── Återlämning ──────────────────────────────────────────────
+    private async Task ReturnLoan( int loanId ) {
+        await LoanRepository.ReturnAsync( loanId, DateTime.UtcNow );
+        await LoadData();
+    }
+}

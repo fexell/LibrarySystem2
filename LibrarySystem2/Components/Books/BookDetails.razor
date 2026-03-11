@@ -1,0 +1,205 @@
+﻿@page "/blazor/books/{Id:int}"
+@using Library2.Models
+@using Library2.Interfaces
+@inject IBookRepository BookRepository
+@inject ILoanRepository LoanRepository
+@inject IMemberRepository MemberRepository
+@inject NavigationManager Navigation
+
+<div class="container mt-4">
+    @if ( isLoading ) {
+        <p>Laddar...</p>
+    } else if ( book is null ) {
+        <div class="alert alert-danger">Boken hittades inte.</div>
+        <a href="/blazor/books" class="btn btn-secondary">Tillbaka</a>
+    } else {
+        @* ── Header ── *@
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>@book.Title</h2>
+            <a href="/blazor/books" class="btn btn-outline-secondary">← Tillbaka</a>
+        </div>
+
+        @* ── Bokinformation ── *@
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Författare:</strong> @book.Author</p>
+                        <p><strong>ISBN:</strong> @book.ISBN</p>
+                        <p><strong>Utgivningsår:</strong> @book.PublishedYear</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p>
+                            <strong>Status:</strong>
+                            <span class="badge @(book.IsAvailable ? "bg-success" : "bg-warning text-dark")">
+                                @(book.IsAvailable ? "Tillgänglig" : "Utlånad")
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ── Låneformuläret ── *@
+        @if ( book.IsAvailable ) {
+            <div class="card mb-4 p-4">
+                <h5>Låna ut bok</h5>
+                <div class="mb-2">
+                    <label>Medlem</label>
+                    <select class="form-select" @bind="loanMemberId">
+                        <option value="0">— Välj medlem —</option>
+                        @foreach ( var member in members ) {
+                            <option value="@member.Id">@member.Username</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label>Återlämningsdatum</label>
+                    <input class="form-control" type="date" @bind="loanDueDate" />
+                </div>
+                @if ( !string.IsNullOrEmpty( errorMessage ) ) {
+                    <div class="alert alert-danger mt-2">@errorMessage</div>
+                }
+                <button class="btn btn-primary mt-2" @onclick="CreateLoan">
+                    Låna ut
+                </button>
+            </div>
+        } else if ( ActiveLoan is { } activeLoan ) {
+            <div class="card mb-4 p-4 border-warning">
+                <h5>Utlånad till</h5>
+                <p><strong>Medlem:</strong> @activeLoan.Member?.Username</p>
+                <p><strong>Utlånades:</strong> @activeLoan.LoanDate.ToShortDateString()</p>
+                <p>
+                    <strong>Förfaller:</strong>
+                    <span class="@(activeLoan.IsOverdue ? "text-danger fw-bold" : "")">
+                        @activeLoan.DueDate.ToShortDateString()
+                        @(activeLoan.IsOverdue ? " ⚠ Försenad!" : "")
+                    </span>
+                </p>
+                <button class="btn btn-success mt-2" @onclick="() => ReturnBook( activeLoan.Id )">
+                    Registrera återlämning
+                </button>
+            </div>
+        }
+
+        @* ── Lånehistorik ── *@
+        <div class="card p-4">
+            <h5>Lånehistorik</h5>
+            @if ( !loanHistory.Any() ) {
+                <p class="text-muted">Inga tidigare lån.</p>
+            } else {
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Medlem</th>
+                            <th>Utlånad</th>
+                            <th>Förfaller</th>
+                            <th>Återlämnad</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ( var loan in loanHistory ) {
+                            <tr>
+                                <td>@loan.Member?.Username</td>
+                                <td>@loan.LoanDate.ToShortDateString()</td>
+                                <td>@loan.DueDate.ToShortDateString()</td>
+                                <td>@(loan.ReturnDate.HasValue? loan.ReturnDate.Value.ToShortDateString() : "—")</td>
+                                <td>
+                                    @if ( loan.IsReturned ) {
+                                        <span class="badge bg-success">Återlämnad</span>
+                                    } else if ( loan.IsOverdue ) {
+                                        <span class="badge bg-danger">Försenad</span>
+                                    } else {
+                                        <span class="badge bg-warning text-dark">Aktiv</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    // ── Parametrar ────────────────────────────────────────────────────────────
+
+    [Parameter]
+    public int Id { get; set; }
+
+    // ── State ─────────────────────────────────────────────────────────────────
+
+    private Book? book;
+    private IEnumerable<Loan> loanHistory = [];
+    private IEnumerable<Member> members = [];
+    private int loanMemberId;
+    private DateTime loanDueDate = DateTime.Today.AddDays( 14 );
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    // ── Beräkningar ──────────────────────────────────────────────────────────────
+
+    private Loan? ActiveLoan => loanHistory.FirstOrDefault( l => !l.IsReturned );
+
+    // ── Livscykel ─────────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync() => await LoadDataAsync();
+    protected override async Task OnParametersSetAsync() => await LoadDataAsync();
+
+    // ── Data ──────────────────────────────────────────────────────────────────
+
+    private async Task LoadDataAsync() {
+        isLoading = true;
+        book = await BookRepository.GetByIdAsync( Id );
+        loanHistory = await LoanRepository.GetByBookIdAsync( Id );
+        members = await MemberRepository.GetAllAsync();
+        isLoading = false;
+    }
+
+    // ── Åtgärder ───────────────────────────────────────────────────────────────
+
+    private async Task CreateLoan() {
+        errorMessage = string.Empty;
+
+        if ( !ValidateLoanForm() )
+            return;
+
+        var loan = new Loan {
+            BookId = Id,
+            MemberId = loanMemberId,
+            Book = book!,
+            LoanDate = DateTime.UtcNow,
+            DueDate = loanDueDate,
+        };
+
+        try {
+            await LoanRepository.AddAsync( loan );
+            await LoadDataAsync();
+        } catch ( InvalidOperationException ex ) {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task ReturnBook( int loanId ) {
+        await LoanRepository.ReturnAsync( loanId, DateTime.UtcNow );
+        await LoadDataAsync();
+    }
+
+    // ── Valedering ────────────────────────────────────────────────────────────
+
+    private bool ValidateLoanForm() {
+        if ( loanMemberId < 1 ) {
+            errorMessage = "Välj en medlem.";
+            return false;
+        }
+
+        if ( loanDueDate <= DateTime.Today ) {
+            errorMessage = "Återlämningsdatum måste vara i framtiden.";
+            return false;
+        }
+
+        return true;
+    }
+}

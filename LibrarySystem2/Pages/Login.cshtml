@@ -1,0 +1,26 @@
+﻿@page
+@model LoginModel
+@{
+    Layout = "_LoginLayout";
+}
+
+<div class="login my-auto mx-auto">
+    <h2>Login</h2>
+    <form id="loginForm" method="post">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" placeholder="Paul" required>
+        <br />
+        <label class="pt-2" for="email">Email (optional if already registered):</label>
+        <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="paul@gmail.com">
+        <br>
+        @if ( !ViewData.ModelState.IsValid )
+        {
+            <div asp-validation-summary="All" class="alert alert-danger mt-4"></div>
+        }
+        <input type="submit" value="Login">
+    </form>
+</div>

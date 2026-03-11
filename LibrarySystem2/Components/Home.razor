@@ -1,0 +1,172 @@
+﻿@page "/blazor"
+@using Library2.Interfaces
+@inject IBookRepository BookRepository
+@inject IMemberRepository MemberRepository
+@inject ILoanRepository LoanRepository
+
+<div class="container mt-4">
+    <h2 class="mb-4">📊 Statistik</h2>
+
+    @if ( isLoading ) {
+        <p>Laddar statistik...</p>
+    } else {
+        @* Statistikkort *@
+        <div class="row g-4 mb-5">
+            <div class="col-md-3">
+                <div class="card text-center p-4 shadow-sm border-primary">
+                    <div class="fs-1 text-primary">@totalBooks</div>
+                    <p class="text-muted mb-0">Totalt antal böcker</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center p-4 shadow-sm border-success">
+                    <div class="fs-1 text-success">@availableBooks</div>
+                    <p class="text-muted mb-0">Tillgängliga böcker</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center p-4 shadow-sm border-warning">
+                    <div class="fs-1 text-warning">@activeLoans</div>
+                    <p class="text-muted mb-0">Aktiva lån</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center p-4 shadow-sm border-danger">
+                    <div class="fs-1 text-danger">@overdueLoans</div>
+                    <p class="text-muted mb-0">Försenade lån</p>
+                </div>
+            </div>
+        </div>
+
+        @* Snabblänkar *@
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card p-4 shadow-sm">
+                    <h5>Senaste lån</h5>
+                    @if ( !recentLoans.Any() ) {
+                        <p class="text-muted">Inga lån ännu.</p>
+                    } else {
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Bok</th>
+                                    <th>Medlem</th>
+                                    <th>Förfaller</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ( var loan in recentLoans ) {
+                                    <tr class="@(loan.IsOverdue ? "table-danger" : "")">
+                                        <td>
+                                            <a href="/blazor/books/@loan.BookId">
+                                                @loan.Book?.Title
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <a href="/blazor/members/@loan.MemberId">
+                                                @loan.Member?.Username
+                                            </a>
+                                        </td>
+                                        <td>
+                                            @loan.DueDate.ToShortDateString()
+                                            @(loan.IsOverdue ? " ⚠" : "")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <a href="/blazor/loans" class="btn btn-sm btn-outline-primary">
+                            Visa alla lån →
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card p-4 shadow-sm">
+                    <h5>Senaste medlemmar</h5>
+                    @if ( !recentMembers.Any() ) {
+                        <p class="text-muted">Inga medlemmar ännu.</p>
+                    } else {
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Namn</th>
+                                    <th>Medlem sedan</th>
+                                    <th>Aktiva lån</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ( var member in recentMembers ) {
+                                    <tr>
+                                        <td>
+                                            <a href="/blazor/members/@member.Id">
+                                                @member.Username
+                                            </a>
+                                        </td>
+                                        <td>@member.MemberSince.ToShortDateString()</td>
+                                        <td>
+                                            <span class="badge bg-primary">
+                                                @member.Loans.Count( l => !l.IsReturned )
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <a href="/blazor/members" class="btn btn-sm btn-outline-primary">
+                            Visa alla medlemmar →
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+
+    // ── Statistik ────────────────────────────────────────────────
+    private int totalBooks;
+    private int availableBooks;
+    private int activeLoans;
+    private int overdueLoans;
+
+    // ── UI-status ────────────────────────────────────────────────
+    private bool isLoading = true;
+
+    // ── Senaste aktivitet ─────────────────────────────────────────
+    private IEnumerable<Library2.Models.Loan> recentLoans = new List<Library2.Models.Loan>();
+    private IEnumerable<Library2.Models.Member> recentMembers = new List<Library2.Models.Member>();
+
+    // ── Livscykel ────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync() {
+        await LoadDashboardData();
+    }
+
+    // ── Datainläsning ────────────────────────────────────────────
+    private async Task LoadDashboardData() {
+        isLoading = true;
+
+        var books = await BookRepository.GetAllAsync();
+        var loans = await LoanRepository.GetAllAsync();
+        var members = await MemberRepository.GetAllAsync();
+
+        totalBooks = books.Count();
+        availableBooks = books.Count( b => b.IsAvailable );
+
+        activeLoans = loans.Count( l => !l.IsReturned );
+        overdueLoans = loans.Count( l => l.IsOverdue );
+
+        recentLoans = loans
+            .Where( l => !l.IsReturned )
+            .OrderByDescending( l => l.LoanDate )
+            .Take( 5 );
+
+        recentMembers = members
+            .OrderByDescending( m => m.MemberSince )
+            .Take( 5 );
+
+        isLoading = false;
+    }
+}

@@ -1,0 +1,11 @@
+﻿@namespace Library2.Components
+@using Microsoft.AspNetCore.Components.Routing
+
+<Router AppAssembly="@typeof( App ).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" />
+    </Found>
+    <NotFound>
+        <h2>Sidan hittades inte.</h2>
+    </NotFound>
+</Router>

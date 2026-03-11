@@ -1,0 +1,178 @@
+﻿@namespace Library2.Components
+@using Library2.Models
+@using Library2.Interfaces
+@inject IBookRepository BookRepository
+@inject IMemberRepository MemberRepository
+@inject ILoanRepository LoanRepository
+@inject NavigationManager Nav
+
+<div class="global-search @(isOpen ? "is-open" : "")" @onfocusout="HandleFocusOut">
+
+    <div class="global-search__input-wrap">
+        <svg class="global-search__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input class="global-search__input"
+               type="search"
+               placeholder="Sök böcker, medlemmar, lån..."
+               autocomplete="off"
+               value="@query"
+               @oninput="OnInput"
+               @onfocus="OnFocus" />
+        @if (isLoading) {
+            <span class="global-search__spinner"></span>
+        }
+    </div>
+
+    @if (isOpen && (hasResults || query.Length > 0)) {
+        <div class="global-search__dropdown">
+
+            @if (isLoading) {
+                <div class="global-search__status">Söker...</div>
+            } else if (!hasResults) {
+                <div class="global-search__status">Inga resultat för <em>@query</em></div>
+            } else {
+                @if (bookResults.Any()) {
+                    <div class="global-search__group-label">Böcker</div>
+                    @foreach (var book in bookResults) {
+                        var b = book;
+                        <button class="global-search__result" @onclick='() => Navigate($"/blazor/books/{b.Id}")'>
+                            <span class="global-search__result-main">@b.Title</span>
+                            <span class="global-search__result-sub">@b.Author · @b.ISBN</span>
+                            <span class="badge @(b.IsAvailable ? "bg-success" : "bg-warning text-dark") ms-auto">
+                                @(b.IsAvailable ? "Tillgänglig" : "Utlånad")
+                            </span>
+                        </button>
+                    }
+                }
+
+                @if (memberResults.Any()) {
+                    <div class="global-search__group-label">Medlemmar</div>
+                    @foreach (var member in memberResults) {
+                        var m = member;
+                        <button class="global-search__result" @onclick='() => Navigate($"/blazor/members/{m.Id}")'>
+                            <span class="global-search__result-main">@m.Username</span>
+                            <span class="global-search__result-sub">@m.Email</span>
+                        </button>
+                    }
+                }
+
+                @if (loanResults.Any()) {
+                    <div class="global-search__group-label">Lån</div>
+                    @foreach (var loan in loanResults) {
+                        var l = loan;
+                        <button class="global-search__result" @onclick='() => Navigate($"/blazor/loans/{l.Id}")'>
+                            <span class="global-search__result-main">@l.Book.Title</span>
+                            <span class="global-search__result-sub">@l.Member.Username · förfaller @l.DueDate.ToString("d MMM yyyy")</span>
+                            <span class="badge @(l.DueDate < DateTime.Today ? "bg-danger" : "bg-secondary") ms-auto">
+                                @(l.DueDate < DateTime.Today ? "Försenad" : "Aktiv")
+                            </span>
+                        </button>
+                    }
+                }
+            }
+
+        </div>
+    }
+</div>
+
+@code {
+
+    // ── State ──────────────────────────────────────────────────────
+    private string query = string.Empty;
+    private bool isOpen = false;
+    private bool isLoading = false;
+
+    // ── Resultat ────────────────────────────────────────────────────
+    private IEnumerable<Book> bookResults = Enumerable.Empty<Book>();
+    private IEnumerable<Member> memberResults = Enumerable.Empty<Member>();
+    private IEnumerable<Loan> loanResults = Enumerable.Empty<Loan>();
+
+    private bool hasResults =>
+        bookResults.Any() || memberResults.Any() || loanResults.Any();
+
+    // ── Debounce ───────────────────────────────────────────────────
+    private CancellationTokenSource? cts;
+
+
+    // ── Händelsehanterare ─────────────────────────────────────────────
+
+    private void OnFocus() {
+        if (query.Length >= 2) isOpen = true;
+    }
+
+    private async Task OnInput(ChangeEventArgs e) {
+        query = e.Value?.ToString() ?? string.Empty;
+
+        cts?.Cancel();
+        cts = new CancellationTokenSource();
+        var token = cts.Token;
+
+        if (query.Length < 2) {
+            isOpen = false;
+            ClearResults();
+            return;
+        }
+
+        isOpen = true;
+        isLoading = true;
+
+        try {
+            // 300 ms debounce — undviker en repo-träff vid varje tangenttryckning
+            await Task.Delay(300, token);
+            await Search(query);
+        } catch ( TaskCanceledException ) { /* ersatt av nyare tangenttryckning */ }
+        finally {
+            isLoading = false;
+        }
+    }
+
+    private void HandleFocusOut() {
+        // Liten fördröjning så att ett klick på ett resultat aktiveras innan rullgardinsmenyn stängs
+        Task.Delay(200).ContinueWith(_ => {
+            isOpen = false;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private void Navigate(string url) {
+        isOpen = false;
+        query = string.Empty;
+        ClearResults();
+        Nav.NavigateTo(url);
+    }
+
+
+    // ── Sök ─────────────────────────────────────────────────────
+
+    private async Task Search(string term) {
+        var t = term.ToLower();
+
+        var books   = await BookRepository.GetAllAsync();
+        var members = await MemberRepository.GetAllAsync();
+        var loans   = await LoanRepository.GetAllAsync();
+
+        bookResults = books
+            .Where(b => b.Title.Contains(t, StringComparison.OrdinalIgnoreCase)  ||
+                        b.Author.Contains(t, StringComparison.OrdinalIgnoreCase) ||
+                        b.ISBN.Contains(t, StringComparison.OrdinalIgnoreCase))
+            .Take(5);
+
+        memberResults = members
+            .Where(m => m.Username.Contains(t, StringComparison.OrdinalIgnoreCase)  ||
+                        m.Email.Contains(t, StringComparison.OrdinalIgnoreCase))
+            .Take(5);
+
+        loanResults = loans
+            .Where(l => l.Book.Title.Contains(t, StringComparison.OrdinalIgnoreCase)   ||
+                        l.Member.Username.Contains(t, StringComparison.OrdinalIgnoreCase))
+            .Take(5);
+    }
+
+    private void ClearResults() {
+        bookResults   = Enumerable.Empty<Book>();
+        memberResults = Enumerable.Empty<Member>();
+        loanResults   = Enumerable.Empty<Loan>();
+    }
+}

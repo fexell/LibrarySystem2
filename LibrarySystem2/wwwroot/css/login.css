@@ -1,0 +1,286 @@
+﻿/* =============================================================================
+   LOGIN STYLES
+   Structure:
+   1. Imports
+   2. Design Tokens
+   3. Reset & Base
+   4. Background Effects
+   5. Login Card
+   6. Typography (Logo, Headings)
+   7. Form Elements
+   8. Submit Button
+   9. Footer
+   10. Animations
+============================================================================= */
+
+
+/* -----------------------------------------------------------------------------
+   1. Imports
+----------------------------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&family=Space+Mono:wght@400;700&display=swap');
+
+
+/* -----------------------------------------------------------------------------
+   2. Design Tokens
+----------------------------------------------------------------------------- */
+:root {
+    /* Colors */
+    --color-bg: #0b0c10;
+    --color-surface: #13151a;
+    --color-surface-raised: #1c1f27;
+    --color-border: rgba(255, 255, 255, 0.07);
+    --color-text: #e8eaf0;
+    --color-muted: #6b7280;
+    --color-placeholder: #3d4250;
+    --color-error: #f87171;
+    /* Accent */
+    --color-accent: #5b8dee;
+    --color-accent-hover: #6f9ef0;
+    --color-accent-glow: rgba(91, 141, 238, 0.35);
+    /* Typography */
+    --font-body: 'Sora', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    /* Spacing & Shape */
+    --radius: 14px;
+    --radius-input: 8px;
+}
+
+
+/* -----------------------------------------------------------------------------
+   3. Reset & Base
+----------------------------------------------------------------------------- */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-body);
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+
+/* -----------------------------------------------------------------------------
+   4. Background Effects (ambient blobs)
+----------------------------------------------------------------------------- */
+body::before,
+body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+body::before {
+    width: 520px;
+    height: 520px;
+    top: -140px;
+    left: -140px;
+    background: radial-gradient(circle, rgba(91, 141, 238, 0.18) 0%, transparent 70%);
+    animation: blob-drift 14s ease-in-out infinite alternate;
+}
+
+body::after {
+    width: 420px;
+    height: 420px;
+    bottom: -120px;
+    right: -100px;
+    background: radial-gradient(circle, rgba(138, 91, 238, 0.14) 0%, transparent 70%);
+    animation: blob-drift 18s ease-in-out infinite alternate-reverse;
+}
+
+
+/* -----------------------------------------------------------------------------
+   5. Login Card
+----------------------------------------------------------------------------- */
+.login {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    padding: 48px 44px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03), 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 60px var(--color-accent-glow);
+    animation: card-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+
+/* -----------------------------------------------------------------------------
+   6. Typography (Logo, Headings)
+----------------------------------------------------------------------------- */
+.login-logo {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.login-logo::before {
+    content: '';
+    display: inline-block;
+    width: 28px;
+    height: 2px;
+    background: var(--color-accent);
+    border-radius: 2px;
+}
+
+.login h2 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--color-text);
+    margin-bottom: 6px;
+}
+
+.login-subtitle {
+    font-size: 13.5px;
+    font-weight: 300;
+    color: var(--color-muted);
+    margin-bottom: 36px;
+}
+
+
+/* -----------------------------------------------------------------------------
+   7. Form Elements
+----------------------------------------------------------------------------- */
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin-bottom: 8px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 13px 16px;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-input);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 400;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(91, 141, 238, 0.18);
+}
+
+input::placeholder {
+    color: var(--color-placeholder);
+}
+
+
+/* -----------------------------------------------------------------------------
+   8. Submit Button
+----------------------------------------------------------------------------- */
+input[type="submit"],
+button[type="submit"] {
+    width: 100%;
+    margin-top: 8px;
+    padding: 14px;
+    background: var(--color-accent);
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border: none;
+    border-radius: var(--radius-input);
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 24px rgba(91, 141, 238, 0.4);
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+
+input[type="submit"]:hover,
+button[type="submit"]:hover {
+    background: var(--color-accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 32px rgba(91, 141, 238, 0.5);
+}
+
+input[type="submit"]:active,
+button[type="submit"]:active {
+    transform: translateY(0);
+}
+
+
+/* -----------------------------------------------------------------------------
+   9. Footer
+----------------------------------------------------------------------------- */
+.login-footer {
+    margin-top: 28px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--color-muted);
+}
+
+.login-footer a {
+    color: var(--color-accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.login-footer a:hover {
+    text-decoration: underline;
+}
+
+
+/* -----------------------------------------------------------------------------
+   10. Animations
+----------------------------------------------------------------------------- */
+@keyframes blob-drift {
+    from {
+        transform: translate(0, 0) scale(1);
+    }
+
+    to {
+        transform: translate(40px, 30px) scale(1.08);
+    }
+}
+
+@keyframes card-in {
+    from {
+        opacity: 0;
+        transform: translateY(28px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}

@@ -1,0 +1,64 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData[ "Title" ] = "Hem";
+}
+
+<div class="container py-5">
+
+    @* Hero *@
+    <div class="text-center mb-5" style="padding: 3rem 0 2rem;">
+        <p style="font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: 1rem;">
+            ── Bibliotekssystem 2.0 ──
+        </p>
+        <h1 style="font-size: clamp(2.5rem, 6vw, 4rem); font-weight: 600; letter-spacing: -0.03em; color: var(--text); margin-bottom: 1rem;">
+            Välkommen tillbaka
+        </h1>
+        <p style="font-size: 1.1rem; color: var(--muted); max-width: 480px; margin: 0 auto 2.5rem;">
+            Hantera böcker, medlemmar och utlåning på ett ställe.
+        </p>
+        <a href="/blazor" class="btn btn-primary px-4 py-2" style="font-size: 14px;">
+            Gå till översikt →
+        </a>
+    </div>
+
+    @* Nav-kort *@
+    <div class="row g-4 justify-content-center" style="max-width: 900px; margin: 0 auto;">
+        <div class="col-sm-6 col-lg-3">
+            <a href="/blazor/books" class="text-decoration-none">
+                <div class="card p-4 text-center h-100" style="cursor:pointer;">
+                    <div style="font-size: 2rem; margin-bottom: 0.75rem;">📖</div>
+                    <h5 style="color: var(--text); margin-bottom: 0.4rem;">Böcker</h5>
+                    <p style="font-size: 13px; margin: 0;">Sök, lägg till och hantera böcker</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <a href="/blazor/members" class="text-decoration-none">
+                <div class="card p-4 text-center h-100" style="cursor:pointer;">
+                    <div style="font-size: 2rem; margin-bottom: 0.75rem;">👤</div>
+                    <h5 style="color: var(--text); margin-bottom: 0.4rem;">Medlemmar</h5>
+                    <p style="font-size: 13px; margin: 0;">Registrera och hantera medlemmar</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <a href="/blazor/loans" class="text-decoration-none">
+                <div class="card p-4 text-center h-100" style="cursor:pointer;">
+                    <div style="font-size: 2rem; margin-bottom: 0.75rem;">🔖</div>
+                    <h5 style="color: var(--text); margin-bottom: 0.4rem;">Utlåning</h5>
+                    <p style="font-size: 13px; margin: 0;">Skapa lån och återlämningar</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <a href="/blazor" class="text-decoration-none">
+                <div class="card p-4 text-center h-100" style="cursor:pointer;">
+                    <div style="font-size: 2rem; margin-bottom: 0.75rem;">📊</div>
+                    <h5 style="color: var(--text); margin-bottom: 0.4rem;">Statistik</h5>
+                    <p style="font-size: 13px; margin: 0;">Översikt och snabbstatistik</p>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
