@@ -1,30 +1,25 @@
-﻿/* =============================================================================
-   LOGIN STYLES
-   Structure:
-   1. Imports
-   2. Design Tokens
-   3. Reset & Base
-   4. Background Effects
-   5. Login Card
-   6. Typography (Logo, Headings)
-   7. Form Elements
-   8. Submit Button
-   9. Footer
-   10. Animations
+﻿@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&family=Space+Mono:wght@400;700&display=swap');
+
+/* =============================================================================
+   INLOGGNINGSSTILAR
+   Struktur:
+   1. Designvariabler
+   2. Reset & Bas
+   3. Bakgrundseffekter
+   4. Inloggningskort
+   5. Typografi
+   6. Formulär
+   7. Skicka-knapp
+   8. Sidfot
+   9. Animationer
 ============================================================================= */
 
 
 /* -----------------------------------------------------------------------------
-   1. Imports
------------------------------------------------------------------------------ */
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&family=Space+Mono:wght@400;700&display=swap');
-
-
-/* -----------------------------------------------------------------------------
-   2. Design Tokens
+   1. Designvariabler
 ----------------------------------------------------------------------------- */
 :root {
-    /* Colors */
+    /* Färger */
     --color-bg: #0b0c10;
     --color-surface: #13151a;
     --color-surface-raised: #1c1f27;
@@ -33,21 +28,21 @@
     --color-muted: #6b7280;
     --color-placeholder: #3d4250;
     --color-error: #f87171;
-    /* Accent */
+    /* Accentfärg */
     --color-accent: #5b8dee;
     --color-accent-hover: #6f9ef0;
     --color-accent-glow: rgba(91, 141, 238, 0.35);
-    /* Typography */
+    /* Typografi */
     --font-body: 'Sora', sans-serif;
     --font-mono: 'Space Mono', monospace;
-    /* Spacing & Shape */
+    /* Avstånd & Form */
     --radius: 14px;
     --radius-input: 8px;
 }
 
 
 /* -----------------------------------------------------------------------------
-   3. Reset & Base
+   2. Reset & Bas
 ----------------------------------------------------------------------------- */
 *, *::before, *::after {
     box-sizing: border-box;
@@ -68,8 +63,8 @@ body {
 }
 
 
-/* -----------------------------------------------------------------------------
-   4. Background Effects (ambient blobs)
+    /* -----------------------------------------------------------------------------
+   3. Bakgrundseffekter (ambient-sfärer)
 ----------------------------------------------------------------------------- */
 body::before,
 body::after {
@@ -101,7 +96,7 @@ body::after {
 
 
 /* -----------------------------------------------------------------------------
-   5. Login Card
+   4. Inloggningskort
 ----------------------------------------------------------------------------- */
 .login {
     position: relative;
@@ -118,7 +113,7 @@ body::after {
 
 
 /* -----------------------------------------------------------------------------
-   6. Typography (Logo, Headings)
+   5. Typografi
 ----------------------------------------------------------------------------- */
 .login-logo {
     font-family: var(--font-mono);
@@ -159,7 +154,7 @@ body::after {
 
 
 /* -----------------------------------------------------------------------------
-   7. Form Elements
+   6. Formulär
 ----------------------------------------------------------------------------- */
 .form-group {
     margin-bottom: 20px;
@@ -204,7 +199,7 @@ input::placeholder {
 
 
 /* -----------------------------------------------------------------------------
-   8. Submit Button
+   7. Skicka-knapp
 ----------------------------------------------------------------------------- */
 input[type="submit"],
 button[type="submit"] {
@@ -240,7 +235,7 @@ button[type="submit"]:active {
 
 
 /* -----------------------------------------------------------------------------
-   9. Footer
+   8. Sidfot
 ----------------------------------------------------------------------------- */
 .login-footer {
     margin-top: 28px;
@@ -261,7 +256,7 @@ button[type="submit"]:active {
 
 
 /* -----------------------------------------------------------------------------
-   10. Animations
+   9. Animationer
 ----------------------------------------------------------------------------- */
 @keyframes blob-drift {
     from {
