@@ -4,6 +4,7 @@
 @inject ILoanRepository LoanRepository
 @inject IBookRepository BookRepository
 @inject IMemberRepository MemberRepository
+@inject NavigationManager Nav
 
 <!-- Redigeringsmodal -->
 @if ( showEditModal ) {
@@ -121,7 +122,10 @@
                 </thead>
                 <tbody>
                     @foreach ( var loan in filteredLoans ) {
-                        <tr class="@(loan.IsOverdue ? "table-danger" : "")">
+                        <tr
+                            class="@(loan.IsOverdue ? "table-danger" : "")"
+                            style="cursor: pointer;"
+                            @onclick='() => Nav.NavigateTo( $"/blazor/loans/{loan.Id}", forceLoad: true )'>
                             <td><a href="/blazor/books/@loan.BookId">@loan.Book?.Title</a></td>
                             <td><a href="/blazor/members/@loan.MemberId">@loan.Member?.Username</a></td>
                             <td>@loan.LoanDate.ToShortDateString()</td>

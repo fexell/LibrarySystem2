@@ -37,7 +37,11 @@
                     <div class="global-search__group-label">Böcker</div>
                     @foreach (var book in bookResults) {
                         var b = book;
-                        <button class="global-search__result" @onclick='() => Navigate($"/blazor/books/{b.Id}")'>
+                        <button
+                            class="global-search__result"
+                            @onclick='() => Navigate($"/blazor/books/{b.Id}")'
+                            @onmousedown:preventDefault
+                            @onmousedown='() => _clickingResult = true'>
                             <span class="global-search__result-main">@b.Title</span>
                             <span class="global-search__result-sub">@b.Author · @b.ISBN</span>
                             <span class="badge @(b.IsAvailable ? "bg-success" : "bg-warning text-dark") ms-auto">
@@ -51,7 +55,11 @@
                     <div class="global-search__group-label">Medlemmar</div>
                     @foreach (var member in memberResults) {
                         var m = member;
-                        <button class="global-search__result" @onclick='() => Navigate($"/blazor/members/{m.Id}")'>
+                        <button
+                            class="global-search__result"
+                            @onclick='() => Navigate($"/blazor/members/{m.Id}")'
+                            @onmousedown:preventDefault
+                            @onmousedown='() => _clickingResult = true'>
                             <span class="global-search__result-main">@m.Username</span>
                             <span class="global-search__result-sub">@m.Email</span>
                         </button>
@@ -62,7 +70,11 @@
                     <div class="global-search__group-label">Lån</div>
                     @foreach (var loan in loanResults) {
                         var l = loan;
-                        <button class="global-search__result" @onclick='() => Navigate($"/blazor/loans/{l.Id}")'>
+                        <button
+                            class="global-search__result"
+                            @onclick='() => Navigate($"/blazor/loans/{l.Id}")'
+                            @onmousedown:preventDefault
+                            @onmousedown='() => _clickingResult = true'>
                             <span class="global-search__result-main">@l.Book.Title</span>
                             <span class="global-search__result-sub">@l.Member.Username · förfaller @l.DueDate.ToString("d MMM yyyy")</span>
                             <span class="badge @(l.DueDate < DateTime.Today ? "bg-danger" : "bg-secondary") ms-auto">
@@ -83,6 +95,7 @@
     private string query = string.Empty;
     private bool isOpen = false;
     private bool isLoading = false;
+    private bool _clickingResult = false; // För att hantera fokusför
 
     // ── Resultat ────────────────────────────────────────────────────
     private IEnumerable<Book> bookResults = Enumerable.Empty<Book>();
@@ -131,16 +144,21 @@
     private void HandleFocusOut() {
         // Liten fördröjning så att ett klick på ett resultat aktiveras innan rullgardinsmenyn stängs
         Task.Delay(200).ContinueWith(_ => {
-            isOpen = false;
-            InvokeAsync(StateHasChanged);
+            if( !_clickingResult ) {
+                isOpen = false;
+                InvokeAsync( StateHasChanged );
+            }
+
+            _clickingResult = false;
         });
     }
 
     private void Navigate(string url) {
+        _clickingResult = false;
         isOpen = false;
         query = string.Empty;
         ClearResults();
-        Nav.NavigateTo(url);
+        Nav.NavigateTo( url, forceLoad: true );
     }
 
 

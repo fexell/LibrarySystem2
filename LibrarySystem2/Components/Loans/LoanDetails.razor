@@ -1,0 +1,171 @@
+﻿@page "/blazor/loans/{Id:int}"
+@using Library2.Models
+@using Library2.Interfaces
+@inject ILoanRepository LoanRepository
+@inject NavigationManager Navigation
+
+<div class="container mt-4">
+    @if ( isLoading ) {
+        <p>Laddar lån...</p>
+    } else if ( loan is null ) {
+        <div class="alert alert-danger">Lånet hittades inte.</div>
+        <a href="/blazor/loans" class="btn btn-secondary">← Tillbaka</a>
+    } else {
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Lånedetaljer</h2>
+            <a href="/blazor/loans" class="btn btn-outline-secondary">← Tillbaka</a>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="mb-3">Bok</h5>
+                <p><strong>Titel:</strong> <a href="/blazor/books/@loan.BookId">@loan.Book?.Title</a></p>
+                <p><strong>Författare:</strong> @loan.Book?.Author</p>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="mb-3">Medlem</h5>
+                <p><strong>Användarnamn:</strong> <a href="/blazor/members/@loan.MemberId">@loan.Member?.Username</a></p>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="mb-3">Låneinformation</h5>
+                <p><strong>Utlånad:</strong> @loan.LoanDate.ToShortDateString()</p>
+                <p>
+                    <strong>Förfaller:</strong>
+                    <span class="@(loan.IsOverdue ? "text-danger fw-bold" : "")">
+                        @loan.DueDate.ToShortDateString()
+                        @(loan.IsOverdue ? " ⚠" : "")
+                    </span>
+                </p>
+                <p><strong>Återlämnad:</strong> @(loan.ReturnDate.HasValue? loan.ReturnDate.Value.ToShortDateString() : "—")</p>
+                <p>
+                    <strong>Status:</strong>
+                    @if ( loan.IsReturned ) {
+                        <span class="badge bg-success">Återlämnad</span>
+                    } else if ( loan.IsOverdue ) {
+                        <span class="badge bg-danger">Försenad</span>
+                    } else {
+                        <span class="badge bg-warning text-dark">Aktiv</span>
+                    }
+                </p>
+            </div>
+        </div>
+
+        @if ( !string.IsNullOrEmpty( errorMessage ) ) {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
+        @if ( !loan.IsReturned ) {
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary" @onclick="OpenEdit">Ändra datum</button>
+                <button class="btn btn-success" @onclick="ReturnLoan">Återlämna</button>
+            </div>
+        }
+    }
+</div>
+
+@if ( showEditModal ) {
+    <div class="modal-backdrop" @onclick="CancelEdit"></div>
+    <div class="modal-dialog-custom">
+        <div class="card p-4">
+            <h5 class="mb-3">Ändra återlämningsdatum</h5>
+            <p class="text-muted mb-3">
+                Lån: <strong style="color: var(--text)">@loan?.Book?.Title</strong>
+            </p>
+            <div class="mb-2">
+                <label>Nytt återlämningsdatum</label>
+                <input class="form-control" type="date" @bind="editDueDate" />
+            </div>
+            @if ( !string.IsNullOrEmpty( editErrorMessage ) ) {
+                <div class="alert alert-danger mt-2">@editErrorMessage</div>
+            }
+            <div class="d-flex gap-2 justify-content-end mt-3">
+                <button class="btn btn-secondary" @onclick="CancelEdit">Avbryt</button>
+                <button class="btn btn-primary" @onclick="SaveEdit">Spara</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Loan? loan;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    // Edit modal
+    private bool showEditModal = false;
+    private DateTime editDueDate = DateTime.Today.AddDays( 14 );
+    private string editErrorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync() {
+        await LoadLoan();
+    }
+
+    private async Task LoadLoan() {
+        try {
+            isLoading = true;
+            errorMessage = string.Empty;
+            loan = await LoanRepository.GetByIdAsync( Id );
+        } catch ( KeyNotFoundException ) {
+            loan = null;
+        } catch {
+            errorMessage = "Kunde inte ladda lånet. Försök igen.";
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    private void OpenEdit() {
+        if ( loan is null ) return;
+        editDueDate = loan.DueDate;
+        editErrorMessage = string.Empty;
+        showEditModal = true;
+    }
+
+    private void CancelEdit() {
+        showEditModal = false;
+        editErrorMessage = string.Empty;
+    }
+
+    private async Task SaveEdit() {
+        try {
+            editErrorMessage = string.Empty;
+
+            if ( editDueDate <= DateTime.Today ) {
+                editErrorMessage = "Återlämningsdatum måste vara i framtiden.";
+                return;
+            }
+
+            await LoanRepository.UpdateDueDateAsync( Id, editDueDate );
+            showEditModal = false;
+            await LoadLoan();
+        } catch ( KeyNotFoundException ex ) {
+            editErrorMessage = ex.Message;
+        } catch ( InvalidOperationException ex ) {
+            editErrorMessage = ex.Message;
+        } catch {
+            editErrorMessage = "Kunde inte uppdatera datumet. Försök igen.";
+        }
+    }
+
+    private async Task ReturnLoan() {
+        try {
+            errorMessage = string.Empty;
+            await LoanRepository.ReturnAsync( Id, DateTime.UtcNow );
+            await LoadLoan();
+        } catch ( KeyNotFoundException ex ) {
+            errorMessage = ex.Message;
+        } catch ( InvalidOperationException ex ) {
+            errorMessage = ex.Message;
+        } catch {
+            errorMessage = "Kunde inte registrera återlämningen. Försök igen.";
+        }
+    }
+}
