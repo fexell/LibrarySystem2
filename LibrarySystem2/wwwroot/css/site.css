@@ -610,19 +610,28 @@ footer {
         padding-right: 1rem;
     }
 
-    .table-responsive-wrapper,
-    .table-responsive {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        width: 100%;
-        border-radius: var(--radius);
-        border: 1px solid var(--border);
+    table thead {
+        display: none;
     }
 
-    .table {
-        min-width: 500px;
-        border: none;
-        border-radius: 0;
+    table tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1rem;
+    }
+
+    table td {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+    }
+
+    table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--muted);
     }
 }
 

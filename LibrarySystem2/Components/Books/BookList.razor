@@ -151,11 +151,11 @@
                     @foreach (var book in pagedBooks)
                     {
                         <tr>
-                            <td>@book.Title</td>
-                            <td>@book.Author</td>
-                            <td>@book.PublishedYear</td>
-                            <td>@book.ISBN</td>
-                            <td>
+                            <td data-label="Titel">@book.Title</td>
+                            <td data-label="Författare">@book.Author</td>
+                            <td data-label="År">@book.PublishedYear</td>
+                            <td data-label="ISBN">@book.ISBN</td>
+                            <td data-label="Status">
                                 <span class="badge @(book.IsAvailable ? "bg-success" : "bg-warning text-dark")">
                                     @(book.IsAvailable ? "Tillgänglig" : "Utlånad")
                                 </span>

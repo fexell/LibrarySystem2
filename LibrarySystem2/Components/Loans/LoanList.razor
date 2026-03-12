@@ -132,17 +132,17 @@
                         <tr class="@(loan.IsOverdue ? "table-danger" : "")"
                             style="cursor: pointer;"
                             @onclick='() => Nav.NavigateTo( $"/blazor/loans/{loan.Id}", forceLoad: true )'>
-                            <td><a href="/blazor/books/@loan.BookId" @onclick:stopPropagation="true">@loan.Book?.Title</a></td>
-                            <td><a href="/blazor/members/@loan.MemberId" @onclick:stopPropagation="true">@loan.Member?.Username</a></td>
-                            <td>@loan.LoanDate.ToShortDateString()</td>
-                            <td>
+                            <td data-label="Bok"><a href="/blazor/books/@loan.BookId" @onclick:stopPropagation="true">@loan.Book?.Title</a></td>
+                            <td data-label="Medlem"><a href="/blazor/members/@loan.MemberId" @onclick:stopPropagation="true">@loan.Member?.Username</a></td>
+                            <td data-label="Utlånad">@loan.LoanDate.ToShortDateString()</td>
+                            <td data-label="Förfaller">
                                 <span class="@(loan.IsOverdue ? "text-danger fw-bold" : "")">
                                     @loan.DueDate.ToShortDateString()
                                     @(loan.IsOverdue ? " ⚠" : "")
                                 </span>
                             </td>
-                            <td>@(loan.ReturnDate.HasValue? loan.ReturnDate.Value.ToShortDateString() : "—")</td>
-                            <td>
+                            <td data-label="Återlämnad">@(loan.ReturnDate.HasValue? loan.ReturnDate.Value.ToShortDateString() : "—")</td>
+                            <td data-label="Status">
                                 @if ( loan.IsReturned ) {
                                     <span class="badge bg-success">Återlämnad</span>
                                 } else if ( loan.IsOverdue ) {

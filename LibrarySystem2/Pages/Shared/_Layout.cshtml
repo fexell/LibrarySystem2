@@ -67,6 +67,19 @@
     </footer>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/_framework/blazor.server.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const offcanvasEl = document.getElementById("mobileMenu");
+            const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl);
+
+            // Close drawer when clicking any link inside it
+            offcanvasEl.querySelectorAll("a.nav-link").forEach(link => {
+                link.addEventListener("click", () => {
+                    offcanvas.hide();
+                });
+            });
+        });
+    </script>
     @await RenderSectionAsync( "Scripts", required: false )
 </body>
 </html>

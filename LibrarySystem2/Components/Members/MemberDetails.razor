@@ -67,19 +67,19 @@
                     <tbody>
                         @foreach ( var loan in activeLoans ) {
                             <tr>
-                                <td>
+                                <td data-label="Titel">
                                     <a href="/blazor/books/@loan.BookId">
                                         @loan.Book?.Title
                                     </a>
                                 </td>
-                                <td>@loan.LoanDate.ToShortDateString()</td>
-                                <td>
+                                <td data-label="Utlånad">@loan.LoanDate.ToShortDateString()</td>
+                                <td data-label="Förfaller">
                                     <span class="@(loan.IsOverdue ? "text-danger fw-bold" : "")">
                                         @loan.DueDate.ToShortDateString()
                                         @(loan.IsOverdue ? " ⚠" : "")
                                     </span>
                                 </td>
-                                <td>
+                                <td data-label="Status">
                                     @if ( loan.IsOverdue ) {
                                         <span class="badge bg-danger">Försenad</span>
                                     } else {
@@ -116,13 +116,13 @@
                     <tbody>
                         @foreach ( var loan in returnedLoans ) {
                             <tr>
-                                <td>
+                                <td data-label="Titel">
                                     <a href="/blazor/books/@loan.BookId">
                                         @loan.Book?.Title
                                     </a>
                                 </td>
-                                <td>@loan.LoanDate.ToShortDateString()</td>
-                                <td>@loan.ReturnDate!.Value.ToShortDateString()</td>
+                                <td data-label="Utlånad">@loan.LoanDate.ToShortDateString()</td>
+                                <td data-label="Återlämnad">@loan.ReturnDate!.Value.ToShortDateString()</td>
                             </tr>
                         }
                     </tbody>

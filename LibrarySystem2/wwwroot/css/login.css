@@ -62,6 +62,10 @@ body {
     position: relative;
 }
 
+ul {
+    margin-bottom: 0;
+}
+
 
     /* -----------------------------------------------------------------------------
    3. Bakgrundseffekter (ambient-sfärer)

@@ -80,6 +80,11 @@ public class MemberRepository : IMemberRepository {
             throw new KeyNotFoundException( $"Medlem med id {id} hittades inte." );
 
         try {
+            foreach ( var loan in member.Loans.Where( l => !l.IsReturned ) ) {
+                loan.Book.MarkAsReturned();
+                _context.Books.Update( loan.Book );
+            }
+
             _context.Members.Remove( member );
             await _context.SaveChangesAsync();
         } catch ( DbUpdateException ex ) {

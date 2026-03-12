@@ -2,6 +2,8 @@
 @using Library2.Models
 @using Library2.Interfaces
 @inject IMemberRepository MemberRepository
+@inject IHttpContextAccessor HttpContextAccessor
+@inject NavigationManager NavigationManager
 
 <!-- Bekräftelsemodal -->
 @if ( showDeleteModal ) {
@@ -106,10 +108,10 @@
                 <tbody>
                     @foreach ( var member in filteredMembers ) {
                         <tr>
-                            <td>@member.Username</td>
-                            <td>@member.Email</td>
-                            <td>@member.MemberSince.ToShortDateString()</td>
-                            <td>
+                            <td data-label="Användarnamn">@member.Username</td>
+                            <td data-label="Email">@member.Email</td>
+                            <td data-label="Medlem sedan">@member.MemberSince.ToShortDateString()</td>
+                            <td data-label="Aktiva lån">
                                 <span class="badge bg-primary">
                                     @member.Loans.Count( l => !l.IsReturned )
                                 </span>
@@ -243,8 +245,16 @@
     private async Task ConfirmDelete() {
         try {
             showDeleteModal = false;
+
+            var currentUsername = HttpContextAccessor.HttpContext?.Request.Cookies[ "username" ];
+            var memberBeingDeleted = allMembers.FirstOrDefault( m => m.Id == memberToDeleteId );
+
             await MemberRepository.DeleteAsync( memberToDeleteId );
-            await LoadMembers();
+
+            if ( memberBeingDeleted?.Username == currentUsername )
+                NavigationManager.NavigateTo( "/Logout", forceLoad: true );
+            else
+                await LoadMembers();
         } catch ( KeyNotFoundException ex ) {
             errorMessage = ex.Message;
         } catch ( InvalidOperationException ex ) {
