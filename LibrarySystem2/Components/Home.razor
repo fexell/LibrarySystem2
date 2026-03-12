@@ -57,17 +57,17 @@
                             <tbody>
                                 @foreach ( var loan in recentLoans ) {
                                     <tr class="@(loan.IsOverdue ? "table-danger" : "")">
-                                        <td>
+                                        <td data-label="Boktitel">
                                             <a href="/blazor/books/@loan.BookId">
                                                 @loan.Book?.Title
                                             </a>
                                         </td>
-                                        <td>
+                                        <td data-label="Medlem">
                                             <a href="/blazor/members/@loan.MemberId">
                                                 @loan.Member?.Username
                                             </a>
                                         </td>
-                                        <td>
+                                        <td data-label="Status">
                                             @loan.DueDate.ToShortDateString()
                                             @(loan.IsOverdue ? " ⚠" : "")
                                         </td>
@@ -99,13 +99,13 @@
                             <tbody>
                                 @foreach ( var member in recentMembers ) {
                                     <tr>
-                                        <td>
+                                        <td data-label="Användarnamn">
                                             <a href="/blazor/members/@member.Id">
                                                 @member.Username
                                             </a>
                                         </td>
-                                        <td>@member.MemberSince.ToShortDateString()</td>
-                                        <td>
+                                        <td data-label="Medlem sedan">@member.MemberSince.ToShortDateString()</td>
+                                        <td data-label="Aktiva lån">
                                             <span class="badge bg-primary">
                                                 @member.Loans.Count( l => !l.IsReturned )
                                             </span>

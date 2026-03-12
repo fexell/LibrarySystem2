@@ -2,8 +2,8 @@
 @using Library2.Models
 @using Library2.Interfaces
 @inject IMemberRepository MemberRepository
-@inject IHttpContextAccessor HttpContextAccessor
 @inject NavigationManager NavigationManager
+@inject IHttpContextAccessor HttpContextAccessor
 
 <!-- Bekräftelsemodal -->
 @if ( showDeleteModal ) {
@@ -219,7 +219,14 @@
                 return;
             }
 
+            var currentUsername = HttpContextAccessor.HttpContext?.Request.Cookies[ "username" ];
+            var isCurrentUser = allMembers.FirstOrDefault( m => m.Id == editMember.Id )?.Username == currentUsername;
+
             await MemberRepository.UpdateAsync( editMember );
+
+            if ( isCurrentUser )
+                HttpContextAccessor.HttpContext?.Response.Cookies.Append( "username", editMember.Username );
+
             showEditModal = false;
             await LoadMembers();
         } catch ( InvalidOperationException ex ) {
