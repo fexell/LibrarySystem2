@@ -4,6 +4,7 @@
 @inject ILoanRepository LoanRepository
 @inject NavigationManager Navigation
 
+@* ── Lånedetaljer ───────────────────────────────────────────── *@
 <div class="container mt-4">
     @if ( isLoading ) {
         <p>Laddar lån...</p>
@@ -11,11 +12,14 @@
         <div class="alert alert-danger">Lånet hittades inte.</div>
         <a href="/blazor/loans" class="btn btn-secondary">← Tillbaka</a>
     } else {
+
+        @* Rubrik + tillbaka-knapp *@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>Lånedetaljer</h2>
             <a href="/blazor/loans" class="btn btn-outline-secondary">← Tillbaka</a>
         </div>
 
+        @* Bokinformation *@
         <div class="card mb-4">
             <div class="card-body">
                 <h5 class="mb-3">Bok</h5>
@@ -24,6 +28,7 @@
             </div>
         </div>
 
+        @* Medlemsinformation *@
         <div class="card mb-4">
             <div class="card-body">
                 <h5 class="mb-3">Medlem</h5>
@@ -31,6 +36,7 @@
             </div>
         </div>
 
+        @* Låneinformation *@
         <div class="card mb-4">
             <div class="card-body">
                 <h5 class="mb-3">Låneinformation</h5>
@@ -56,10 +62,12 @@
             </div>
         </div>
 
+        @* Felmeddelande *@
         @if ( !string.IsNullOrEmpty( errorMessage ) ) {
             <div class="alert alert-danger">@errorMessage</div>
         }
 
+        @* Åtgärdsknappar (visas endast för aktiva lån) *@
         @if ( !loan.IsReturned ) {
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-secondary" @onclick="OpenEdit">Ändra datum</button>
@@ -69,6 +77,7 @@
     }
 </div>
 
+@* ── Redigeringsmodal ───────────────────────────────────────── *@
 @if ( showEditModal ) {
     <div class="modal-backdrop" @onclick="CancelEdit"></div>
     <div class="modal-dialog-custom">
@@ -93,20 +102,27 @@
 }
 
 @code {
+
+    // ── Parameter ──────────────────────────────────────────────────
     [Parameter] public int Id { get; set; }
 
+    // ── Lånedata ───────────────────────────────────────────────────
     private Loan? loan;
     private bool isLoading = true;
     private string errorMessage = string.Empty;
 
-    // Edit modal
+    // ── Redigeringsmodal ───────────────────────────────────────────
     private bool showEditModal = false;
     private DateTime editDueDate = DateTime.Today.AddDays( 14 );
     private string editErrorMessage = string.Empty;
 
-    protected override async Task OnInitializedAsync() {
-        await LoadLoan();
-    }
+
+    // ── Livscykel ──────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync() => await LoadLoan();
+
+
+    // ── Datahämtning ───────────────────────────────────────────────
 
     private async Task LoadLoan() {
         try {
@@ -121,6 +137,9 @@
             isLoading = false;
         }
     }
+
+
+    // ── Redigera datum ─────────────────────────────────────────────
 
     private void OpenEdit() {
         if ( loan is null ) return;
@@ -146,26 +165,17 @@
             await LoanRepository.UpdateDueDateAsync( Id, editDueDate );
             showEditModal = false;
             await LoadLoan();
-        } catch ( KeyNotFoundException ex ) {
-            editErrorMessage = ex.Message;
-        } catch ( InvalidOperationException ex ) {
-            editErrorMessage = ex.Message;
-        } catch {
-            editErrorMessage = "Kunde inte uppdatera datumet. Försök igen.";
-        }
+        } catch ( KeyNotFoundException ex ) { editErrorMessage = ex.Message; } catch ( InvalidOperationException ex ) { editErrorMessage = ex.Message; } catch { editErrorMessage = "Kunde inte uppdatera datumet. Försök igen."; }
     }
+
+
+    // ── Återlämning ────────────────────────────────────────────────
 
     private async Task ReturnLoan() {
         try {
             errorMessage = string.Empty;
             await LoanRepository.ReturnAsync( Id, DateTime.UtcNow );
             await LoadLoan();
-        } catch ( KeyNotFoundException ex ) {
-            errorMessage = ex.Message;
-        } catch ( InvalidOperationException ex ) {
-            errorMessage = ex.Message;
-        } catch {
-            errorMessage = "Kunde inte registrera återlämningen. Försök igen.";
-        }
+        } catch ( KeyNotFoundException ex ) { errorMessage = ex.Message; } catch ( InvalidOperationException ex ) { errorMessage = ex.Message; } catch { errorMessage = "Kunde inte registrera återlämningen. Försök igen."; }
     }
 }

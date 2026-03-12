@@ -6,7 +6,7 @@
 @inject IMemberRepository MemberRepository
 @inject NavigationManager Nav
 
-<!-- Redigeringsmodal -->
+@* ── Redigeringsmodal ───────────────────────────────────────── *@
 @if ( showEditModal ) {
     <div class="modal-backdrop" @onclick="CancelEdit"></div>
     <div class="modal-dialog-custom">
@@ -30,7 +30,10 @@
     </div>
 }
 
+@* ── Huvudinnehåll ───────────────────────────────────────────── *@
 <div class="container mt-4">
+
+    @* Rubrik + nytt-lån-knapp *@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Utlåning</h2>
         <button class="btn btn-primary" @onclick="() => showAddForm = !showAddForm">
@@ -38,6 +41,7 @@
         </button>
     </div>
 
+    @* Skapa nytt lån-formulär *@
     @if ( showAddForm ) {
         <div class="card mb-4 p-4">
             <h5>Skapa nytt lån</h5>
@@ -76,10 +80,12 @@
         </div>
     }
 
+    @* Felmeddelande (utanför formuläret) *@
     @if ( !string.IsNullOrEmpty( errorMessage ) && !showAddForm ) {
         <div class="alert alert-danger mt-2">@errorMessage</div>
     }
 
+    @* Filterknappar *@
     <div class="btn-group mb-3">
         <button class="btn @(activeFilter == "all" ? "btn-primary" : "btn-outline-primary")"
                 @onclick='() => SetFilter( "all" )'>
@@ -102,6 +108,7 @@
         </button>
     </div>
 
+    @* Lånetabell *@
     @if ( isLoading ) {
         <p>Laddar lån...</p>
     } else if ( !filteredLoans.Any() ) {
@@ -122,8 +129,7 @@
                 </thead>
                 <tbody>
                     @foreach ( var loan in filteredLoans ) {
-                        <tr
-                            class="@(loan.IsOverdue ? "table-danger" : "")"
+                        <tr class="@(loan.IsOverdue ? "table-danger" : "")"
                             style="cursor: pointer;"
                             @onclick='() => Nav.NavigateTo( $"/blazor/loans/{loan.Id}", forceLoad: true )'>
                             <td><a href="/blazor/books/@loan.BookId" @onclick:stopPropagation="true">@loan.Book?.Title</a></td>
@@ -165,11 +171,12 @@
             </table>
         </div>
     }
+
 </div>
 
 @code {
 
-    // ── Lånedata ─────────────────────────────────────────────────
+    // ── Lånedata ───────────────────────────────────────────────────
     private IEnumerable<Loan> allLoans = new List<Loan>();
     private IEnumerable<Loan> filteredLoans = new List<Loan>();
     private IEnumerable<Book> availableBooks = new List<Book>();
@@ -177,76 +184,41 @@
     private string activeFilter = "all";
     private int overdueCount = 0;
 
-    // ── UI-status ────────────────────────────────────────────────
+    // ── UI-status ──────────────────────────────────────────────────
     private bool isLoading = true;
     private bool showAddForm = false;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
 
-    // ── Skapa nytt lån ───────────────────────────────────────────
+    // ── Skapa nytt lån ─────────────────────────────────────────────
     private int newLoanBookId = 0;
     private int newLoanMemberId = 0;
     private DateTime newLoanDueDate = DateTime.Today.AddDays( 14 );
 
-    // ── Redigeringsmodal ─────────────────────────────────────────
+    // ── Redigeringsmodal ───────────────────────────────────────────
     private bool showEditModal = false;
     private int editLoanId = 0;
     private string editLoanTitle = string.Empty;
     private DateTime editDueDate = DateTime.Today.AddDays( 14 );
     private string editErrorMessage = string.Empty;
 
-    // ── Livscykel ────────────────────────────────────────────────
+
+    // ── Livscykel ──────────────────────────────────────────────────
+
     protected override async Task OnInitializedAsync() {
         await LoadLoans();
         await LoadDropdownData();
     }
 
-    // ── Redigera ─────────────────────────────────────────────────
-    private void OpenEdit( Loan loan ) {
-        editLoanId = loan.Id;
-        editLoanTitle = loan.Book?.Title ?? string.Empty;
-        editDueDate = loan.DueDate;
-        editErrorMessage = string.Empty;
-        showEditModal = true;
-    }
 
-    private void CancelEdit() {
-        showEditModal = false;
-        editErrorMessage = string.Empty;
-    }
+    // ── Datahämtning ───────────────────────────────────────────────
 
-    private async Task SaveEdit() {
-        try {
-            editErrorMessage = string.Empty;
-
-            if ( editDueDate <= DateTime.Today ) {
-                editErrorMessage = "Återlämningsdatum måste vara i framtiden.";
-                return;
-            }
-
-            await LoanRepository.UpdateDueDateAsync( editLoanId, editDueDate );
-            showEditModal = false;
-            await LoadLoans();
-        } catch ( KeyNotFoundException ex ) {
-            editErrorMessage = ex.Message;
-        } catch ( InvalidOperationException ex ) {
-            editErrorMessage = ex.Message;
-        } catch {
-            editErrorMessage = "Kunde inte uppdatera datumet. Försök igen.";
-        }
-    }
-
-    // ── Laddning av data ─────────────────────────────────────────
     private async Task LoadDropdownData() {
         try {
             var books = await BookRepository.GetAllAsync();
             availableBooks = books.Where( b => b.IsAvailable );
             allMembers = await MemberRepository.GetAllAsync();
-        } catch ( InvalidOperationException ex ) {
-            errorMessage = ex.Message;
-        } catch {
-            errorMessage = "Kunde inte ladda böcker eller medlemmar.";
-        }
+        } catch ( InvalidOperationException ex ) { errorMessage = ex.Message; } catch { errorMessage = "Kunde inte ladda böcker eller medlemmar."; }
     }
 
     private async Task LoadLoans() {
@@ -258,16 +230,12 @@
             overdueCount = allLoans.Count( l => l.IsOverdue );
 
             SetFilter( activeFilter );
-        } catch ( InvalidOperationException ex ) {
-            errorMessage = ex.Message;
-        } catch {
-            errorMessage = "Ett oväntat fel uppstod. Försök igen.";
-        } finally {
-            isLoading = false;
-        }
+        } catch ( InvalidOperationException ex ) { errorMessage = ex.Message; } catch { errorMessage = "Ett oväntat fel uppstod. Försök igen."; } finally { isLoading = false; }
     }
 
-    // ── Filtrering ───────────────────────────────────────────────
+
+    // ── Filtrering ─────────────────────────────────────────────────
+
     private void SetFilter( string filter ) {
         activeFilter = filter;
 
@@ -279,7 +247,9 @@
         };
     }
 
-    // ── Skapa nytt lån ───────────────────────────────────────────
+
+    // ── Skapa nytt lån ─────────────────────────────────────────────
+
     private async Task CreateLoan() {
         try {
             errorMessage = string.Empty;
@@ -319,21 +289,49 @@
             await LoanRepository.AddAsync( loan );
 
             successMessage = $"\"{book.Title}\" utlånad till {member.Username}!";
-
             newLoanBookId = 0;
             newLoanMemberId = 0;
             newLoanDueDate = DateTime.Today.AddDays( 14 );
 
             await LoadLoans();
             await LoadDropdownData();
-        } catch ( InvalidOperationException ex ) {
-            errorMessage = ex.Message;
-        } catch {
-            errorMessage = "Kunde inte skapa lånet. Försök igen.";
-        }
+        } catch ( InvalidOperationException ex ) { errorMessage = ex.Message; } catch { errorMessage = "Kunde inte skapa lånet. Försök igen."; }
     }
 
-    // ── Återlämning ──────────────────────────────────────────────
+
+    // ── Redigera datum ─────────────────────────────────────────────
+
+    private void OpenEdit( Loan loan ) {
+        editLoanId = loan.Id;
+        editLoanTitle = loan.Book?.Title ?? string.Empty;
+        editDueDate = loan.DueDate;
+        editErrorMessage = string.Empty;
+        showEditModal = true;
+    }
+
+    private void CancelEdit() {
+        showEditModal = false;
+        editErrorMessage = string.Empty;
+    }
+
+    private async Task SaveEdit() {
+        try {
+            editErrorMessage = string.Empty;
+
+            if ( editDueDate <= DateTime.Today ) {
+                editErrorMessage = "Återlämningsdatum måste vara i framtiden.";
+                return;
+            }
+
+            await LoanRepository.UpdateDueDateAsync( editLoanId, editDueDate );
+            showEditModal = false;
+            await LoadLoans();
+        } catch ( KeyNotFoundException ex ) { editErrorMessage = ex.Message; } catch ( InvalidOperationException ex ) { editErrorMessage = ex.Message; } catch { editErrorMessage = "Kunde inte uppdatera datumet. Försök igen."; }
+    }
+
+
+    // ── Återlämning ────────────────────────────────────────────────
+
     private async Task ReturnLoan( int loanId ) {
         try {
             errorMessage = string.Empty;
@@ -341,12 +339,6 @@
             await LoanRepository.ReturnAsync( loanId, DateTime.UtcNow );
             await LoadLoans();
             await LoadDropdownData();
-        } catch ( KeyNotFoundException ex ) {
-            errorMessage = ex.Message;
-        } catch ( InvalidOperationException ex ) {
-            errorMessage = ex.Message;
-        } catch {
-            errorMessage = "Kunde inte registrera återlämningen. Försök igen.";
-        }
+        } catch ( KeyNotFoundException ex ) { errorMessage = ex.Message; } catch ( InvalidOperationException ex ) { errorMessage = ex.Message; } catch { errorMessage = "Kunde inte registrera återlämningen. Försök igen."; }
     }
 }
