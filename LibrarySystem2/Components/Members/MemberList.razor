@@ -4,6 +4,7 @@
 @inject IMemberRepository MemberRepository
 @inject NavigationManager NavigationManager
 @inject IHttpContextAccessor HttpContextAccessor
+@inject IJSRuntime JS
 
 <!-- Bekräftelsemodal -->
 @if ( showDeleteModal ) {
@@ -225,7 +226,7 @@
             await MemberRepository.UpdateAsync( editMember );
 
             if ( isCurrentUser )
-                HttpContextAccessor.HttpContext?.Response.Cookies.Append( "username", editMember.Username );
+                await JS.InvokeVoidAsync( "eval", $"document.cookie = 'username={editMember.Username}; path=/'" );
 
             showEditModal = false;
             await LoadMembers();
