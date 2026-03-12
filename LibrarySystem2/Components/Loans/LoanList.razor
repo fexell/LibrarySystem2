@@ -126,8 +126,8 @@
                             class="@(loan.IsOverdue ? "table-danger" : "")"
                             style="cursor: pointer;"
                             @onclick='() => Nav.NavigateTo( $"/blazor/loans/{loan.Id}", forceLoad: true )'>
-                            <td><a href="/blazor/books/@loan.BookId">@loan.Book?.Title</a></td>
-                            <td><a href="/blazor/members/@loan.MemberId">@loan.Member?.Username</a></td>
+                            <td><a href="/blazor/books/@loan.BookId" @onclick:stopPropagation="true">@loan.Book?.Title</a></td>
+                            <td><a href="/blazor/members/@loan.MemberId" @onclick:stopPropagation="true">@loan.Member?.Username</a></td>
                             <td>@loan.LoanDate.ToShortDateString()</td>
                             <td>
                                 <span class="@(loan.IsOverdue ? "text-danger fw-bold" : "")">
@@ -148,10 +148,12 @@
                             <td>
                                 @if ( !loan.IsReturned ) {
                                     <button class="btn btn-sm btn-outline-secondary me-1"
+                                            @onclick:stopPropagation="true"
                                             @onclick="() => OpenEdit( loan )">
                                         Ändra datum
                                     </button>
                                     <button class="btn btn-sm btn-success"
+                                            @onclick:stopPropagation="true"
                                             @onclick="() => ReturnLoan( loan.Id )">
                                         Återlämna
                                     </button>
